@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: wg-easy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - LANG=it # optional, change it to the language you prefer
+      - WG_HOST=999.999.999.999  # Your server's public IP address
+      - PASSWORD_HASH=$$2a$$12$$wsdjfh78sad778a7d9798a7d987877878A2 # HASH of your password to access Wireguard's WebUI (check readme.md)
+      - WG_PORT=51820
+      - WG_DEFAULT_ADDRESS=10.8.0.x
+      - WG_DEFAULT_DNS=10.2.0.3  # Pi-Hole's IP in the Docker network
+      - WG_ALLOWED_IPS=0.0.0.0/0
+      - WG_PERSISTENT_KEEPALIVE=25
+    volumes:
+      - ./wg-easy:/etc/wireguard
+    ports:
+      - "51820:51820/udp"  # WireGuard
+      - "51821:51821/tcp"  # WebUI
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      vpn-network:
+        ipv4_address: 10.2.0.2
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    environment:
+      - TZ=Europe/Rome # Change it to your timezone, if needed
+      - FTLCONF_webserver_api_password=CHOOSEYOURPASSWORD # choose your password to acccess PiHole's WebUI
+      - SERVERIP=10.2.0.3
+      - DNS1=1.1.1.1  # Cloudflare DNS, if you want you can change it for your preferred DNS
+      - DNS2=1.0.0.1  # Cloudflare DNS, if you want you can change it for your preferred DNS
+      - DNSMASQ_LISTENING=all
+    volumes:
+      - ./pihole/etc-pihole:/etc/pihole
+      - ./pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+    ports:
+      - "8880:80"  # Pi-hole's WebUI (8880 to avoid conflict with nginx -80 and qBittorrent -8080)
+      - "53:53/tcp" # May need to change to something like 5353:53 or any other port non used by other services
+      - "53:53/udp" # May need to change to something like 5353:53 or any other port non used by other services
+    restart: unless-stopped
+    networks:
+      vpn-network:
+        ipv4_address: 10.2.0.3
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+
+networks:
+  vpn-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.2.0.0/24
+          gateway: 10.2.0.1
