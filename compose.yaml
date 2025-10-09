@@ -43,8 +43,9 @@ services:
       - ./pihole/etc-dnsmasq.d:/etc/dnsmasq.d
     ports:
       - "8880:80"  # Pi-hole's WebUI (8880 to avoid conflict with nginx -80 and qBittorrent -8080)
-      - "53:53/tcp" # May need to change to something like 5353:53 or any other port non used by other services
-      - "53:53/udp" # May need to change to something like 5353:53 or any other port non used by other services
+      # port 53 is now commented out to enhance security, try to uncomment the next 2 lines if this setup doesn't work
+      #- "53:53/tcp" # May need to change to something like 5353:53 or any other port non used by other services
+      #- "53:53/udp" # May need to change to something like 5353:53 or any other port non used by other services
     restart: unless-stopped
     networks:
       vpn-network:
